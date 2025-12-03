@@ -23,6 +23,7 @@ import org.springframework.samples.petclinic.util.EntityUtils;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -499,6 +500,35 @@ abstract class AbstractClinicServiceTests {
                     actual -> actual.getName().equals(expected.getName())
                     && actual.getId().equals(expected.getId()))).isTrue();
         }
+    }
+    @Test
+    void shouldFindPetWithWeight() {
+        Pet pet1 = this.clinicService.findPetById(1);
+        assertThat(pet1.getName()).isEqualTo("Leo");
+        assertThat(pet1.getWeight()).isNotNull();
+        assertThat(pet1.getWeight()).isGreaterThan(BigDecimal.ZERO);
+    }
+    @Test
+    void shouldFindPetWithNullWeight() {
+        Pet pet4 = this.clinicService.findPetById(4);
+        assertThat(pet4.getName()).isEqualTo("Jewel");
+        assertThat(pet4.getWeight()).isNull();
+    }
+
+    @Test
+    void shouldFindAllPetsWithWeightInformation(){
+        Collection<Pet> pets = this.clinicService.findAllPets();
+        Pet pet1 = EntityUtils.getById(pets, Pet.class, 1);
+        assertThat(pet1.getName()).isEqualTo("Leo");
+        assertThat(pet1.getWeight()).isNotNull();
+
+        Pet pet4 = EntityUtils.getById(pets, Pet.class, 4);
+        assertThat(pet4.getName()).isEqualTo("Jewel");
+        assertThat(pet4.getWeight()).isNull();
+
+        Pet pet3 = EntityUtils.getById(pets, Pet.class, 3);
+        assertThat(pet3.getName()).isEqualTo("Rosy");
+        assertThat(pet3.getWeight()).isNull();
     }
 
     void clearCache() {}
