@@ -28,6 +28,8 @@ import org.springframework.samples.petclinic.mapper.OwnerMapper;
 import org.springframework.samples.petclinic.mapper.PetMapper;
 import org.springframework.samples.petclinic.mapper.VisitMapper;
 import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.PetType;
 import org.springframework.samples.petclinic.rest.advice.ExceptionControllerAdvice;
 import org.springframework.samples.petclinic.rest.dto.OwnerDto;
 import org.springframework.samples.petclinic.rest.dto.PetDto;
@@ -43,11 +45,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -111,12 +115,14 @@ class OwnerRestControllerTests {
         pets.add(pet.id(3)
             .name("Rosy")
             .birthDate(LocalDate.now())
+            .weight(BigDecimal.valueOf(3.3))
             .type(petType));
 
         pet = new PetDto();
         pets.add(pet.id(4)
             .name("Jewel")
             .birthDate(LocalDate.now())
+            .weight(null)
             .type(petType));
 
         visits = new ArrayList<>();
@@ -490,6 +496,161 @@ class OwnerRestControllerTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updatedPetAsJSON))
             .andExpect(status().isNotFound());
+    }
+    
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testCreatePetWithWeightSucess() throws Exception {
+        PetDto newPet = pets.get(0);
+        newPet.setWeight(new BigDecimal(15.5));
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        String newPetAsJSON = mapper.writeValueAsString(newPet);
+
+        this.mockMvc.perform(post("/api/owners/1/pets")
+                .content(newPetAsJSON)
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$.weight").value("15.5"));
+    }
+     @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testCreatePetWithWeightNullSucess() throws Exception {
+        PetDto newPet = pets.get(0);
+        newPet.setWeight(null);
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        String newPetAsJSON = mapper.writeValueAsString(newPet);
+
+        this.mockMvc.perform(post("/api/owners/1/pets")
+                .content(newPetAsJSON)
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.weight").value(nullValue()));
+
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testCreatePetWithWeightError() throws Exception {
+        PetDto newPet = pets.get(0);
+        newPet.setWeight(new BigDecimal(-3));
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        String newPetAsJSON = mapper.writeValueAsString(newPet);
+ 
+        this.mockMvc.perform(post("/api/owners/1/pets")
+                .content(newPetAsJSON)
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(status().isBadRequest());
+    }
+
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testGetOwnersPetsWithNullWeight() throws Exception {
+            
+        int ownerId = owners.get(0).getId();
+        var owner = ownerMapper.toOwner(owners.get(0));
+        given(this.clinicService.findOwnerById(ownerId)).willReturn(owner);
+
+        int petId = 1;
+        Pet pet = new Pet();
+        pet.setId(petId);
+        pet.setName("Rosy");
+        pet.setBirthDate(LocalDate.now());
+        PetType pt = new PetType();
+        pt.setId(pets.get(0).getType().getId()); 
+        pt.setName(pets.get(0).getType().getName());
+        pet.setType(pt);
+        pet.setWeight(null);    
+        pet.setOwner(owner);
+
+        given(this.clinicService.findPetById(petId)).willReturn(pet);
+
+        this.mockMvc.perform(get("/api/owners/" + ownerId + "/pets/" + petId)
+            .accept(MediaType.APPLICATION_JSON))
+            .andDo(MockMvcResultHandlers.print())
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.id").value(petId))
+            .andExpect(jsonPath("$.name").value("Rosy"))
+            .andExpect(jsonPath("$.weight").value(nullValue()));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testUpdateOwnersPetWithWeightSucess() throws Exception {
+        final int ownerId = owners.get(0).getId();
+        OwnerDto ownerdto = owners.get(0);
+        PetDto petDto = ownerdto.getPets().get(0);
+        petDto.setName("Rio");
+        petDto.setWeight(new BigDecimal("5.5"));
+
+        final int petId = petDto.getId();
+        given(this.clinicService.findOwnerById(ownerId)).willReturn(ownerMapper.toOwner(owners.get(0)));
+        given(this.clinicService.findPetById(petId)).willReturn(petMapper.toPet(ownerdto.getPets().get(0)));
+
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        String updatedPetAsJSON = mapper.writeValueAsString(petDto);
+        this.mockMvc.perform(put("/api/owners/" + ownerId + "/pets/" + petId)
+                .content(updatedPetAsJSON)
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isNoContent()).andDo(MockMvcResultHandlers.print());
+            
+        this.mockMvc.perform(get("/api/owners/" + ownerId + "/pets/" + petId)
+                .accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$.id").value(petId))
+                .andExpect(jsonPath("$.name").value("Rio"))
+                .andExpect(jsonPath("$.weight").value(5.5));
+    }
+    
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testUpdateOwnersPetWithWeightError() throws Exception {
+        final int ownerId = owners.get(0).getId();
+        final int petId = pets.get(0).getId();
+        given(this.clinicService.findOwnerById(ownerId)).willReturn(ownerMapper.toOwner(owners.get(0)));
+        given(this.clinicService.findPetById(petId)).willReturn(petMapper.toPet(pets.get(0)));
+
+        final PetDto updatedPetDto = pets.get(0);
+        updatedPetDto.setName("Rio");
+        updatedPetDto.setWeight(new BigDecimal("-3"));
+
+        final ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        String updatedPetAsJSON = mapper.writeValueAsString(updatedPetDto);
+        this.mockMvc.perform(put("/api/owners/" + ownerId + "/pets/" + petId)
+                .content(updatedPetAsJSON)
+                .accept(MediaType.APPLICATION_JSON_VALUE)
+                .contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isBadRequest()).andDo(MockMvcResultHandlers.print());
     }
 
 }
