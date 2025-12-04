@@ -1955,6 +1955,14 @@ components:
           example: '2010-09-07'
         type:
           $ref: '#/components/schemas/PetType'
+        weight:
+          title: Weight
+          description: The weight of the pet in kilograms.
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 999.99
+          example: 15.75
       required:
         - name
         - birthDate
