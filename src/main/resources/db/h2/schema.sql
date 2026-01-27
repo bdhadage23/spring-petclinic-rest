@@ -61,8 +61,13 @@ CREATE TABLE IF NOT EXISTS visits (
 
 CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(20) NOT NULL PRIMARY KEY,
-  password VARCHAR(255) NOT NULL,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE
+  password VARCHAR(255),
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  email VARCHAR(100),
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  oauth_provider VARCHAR(20),
+  oauth_id VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS roles (
