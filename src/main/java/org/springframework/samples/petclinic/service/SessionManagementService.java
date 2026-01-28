@@ -5,6 +5,8 @@ import org.springframework.samples.petclinic.model.User;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,42 +20,6 @@ public class SessionManagementService {
     public void setAuthenticatedUser(HttpSession session, User user) {
         session.setAttribute("authenticated_user", user);
         updateLastActivityTime(session);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> getUserPreferences(HttpSession session) {
-        Map<String, Object> preferences = (Map<String, Object>) session.getAttribute("user_preferences");
-        if (preferences == null) {
-            preferences = new HashMap<>();
-            session.setAttribute("user_preferences", preferences);
-        }
-        return preferences;
-    }
-
-    public void setUserPreference(HttpSession session, String key, Object value) {
-        Map<String, Object> preferences = getUserPreferences(session);
-        preferences.put(key, value);
-        session.setAttribute("user_preferences", preferences);
-        updateLastActivityTime(session);
-    }
-
-    public void removeUserPreference(HttpSession session, String key) {
-        Map<String, Object> preferences = getUserPreferences(session);
-        preferences.remove(key);
-        session.setAttribute("user_preferences", preferences);
-        updateLastActivityTime(session);
-    }
-
-    public LocalDateTime getSessionCreatedTime(HttpSession session) {
-        return (LocalDateTime) session.getAttribute("session_created_time");
-    }
-
-    public LocalDateTime getLastActivityTime(HttpSession session) {
-        return (LocalDateTime) session.getAttribute("last_activity_time");
-    }
-
-    public void updateLastActivityTime(HttpSession session) {
-        session.setAttribute("last_activity_time", LocalDateTime.now());
     }
 
     public Map<String, Object> getSessionInfo(HttpSession session) {
@@ -76,7 +42,60 @@ public class SessionManagementService {
         return sessionInfo;
     }
 
+        public LocalDateTime getSessionCreatedTime(HttpSession session) {
+        return (LocalDateTime) session.getAttribute("session_created_time");
+    }
+
+    public LocalDateTime getLastActivityTime(HttpSession session) {
+        return (LocalDateTime) session.getAttribute("last_activity_time");
+    }
+
+    public void updateLastActivityTime(HttpSession session) {
+        session.setAttribute("last_activity_time", LocalDateTime.now());
+    }
+
     public void invalidateSession(HttpSession session) {
         session.invalidate();
+    }
+
+    public Map<String, Object> getAllSessionAttributes(HttpSession session) {
+        if (session == null) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Object> attributes = new HashMap<>();
+        Enumeration<String> attributeNames = session.getAttributeNames();
+        
+        while (attributeNames.hasMoreElements()) {
+            String attributeName = attributeNames.nextElement();
+            Object attributeValue = session.getAttribute(attributeName);
+            attributes.put(attributeName, attributeValue);
+        }
+        
+        return attributes;
+    }
+    public Object getSessionAttribute(HttpSession session, String key) {
+        if (session == null) {
+            return null;
+        }
+        return session.getAttribute(key);
+    }
+
+    public void setSessionAttribute(HttpSession session, String key, Object value) {
+        if (session != null) {
+            session.setAttribute(key, value);
+            
+            // Update last activity time when setting attributes
+            session.setAttribute("last_activity_time", LocalDateTime.now());
+        }
+    }
+
+    public void removeSessionAttribute(HttpSession session, String key) {
+        if (session != null) {
+            session.removeAttribute(key);
+           
+            // Update last activity time when removing attributes
+            session.setAttribute("last_activity_time", LocalDateTime.now());
+        }
     }
 }

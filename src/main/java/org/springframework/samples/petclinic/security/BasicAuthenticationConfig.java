@@ -10,11 +10,15 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
+import java.util.Map;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true) // Enable @PreAuthorize method-level security
@@ -25,6 +29,9 @@ public class BasicAuthenticationConfig {
     private DataSource dataSource;
 
     @Autowired
+    private Environment env;
+
+    @Autowired
     private AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
 
     @Bean
@@ -32,23 +39,24 @@ public class BasicAuthenticationConfig {
         return new BCryptPasswordEncoder();
     }
 
-
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+       
+       
+          // Conditionally enable OAuth2
+        boolean oauthEnabled = Boolean.parseBoolean(
+            env.getProperty("petclinic.security.oauth2.enable", "false")
+        );
 
-         http
+        if(oauthEnabled) {
+             http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/auth/**", "/login/**", "/oauth2/**", "/error").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/status", "/api/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )
-
-            // Basic Authentication for REST API clients
-            .httpBasic(Customizer.withDefaults())
-
-            //OAuth2 login for web clients
             .oauth2Login(oauth2 -> oauth2
                 .loginPage("/api/auth/login")
                 .successHandler(oauth2AuthenticationSuccessHandler)
@@ -56,12 +64,24 @@ public class BasicAuthenticationConfig {
             )
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
-                .logoutSuccessUrl("/api/auth/login?logout=true")
+                .logoutSuccessUrl("/api/auth/status")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
             );
 
-        return http.build();
+            return http.build();
+        }
+        else {
+
+            // @formatter:off
+            http
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests((authz) -> authz
+                    .anyRequest().authenticated())
+                    .httpBasic(Customizer.withDefaults());
+            // @formatter:on
+            return http.build();
+        }
     }
 
     @Autowired

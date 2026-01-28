@@ -13,6 +13,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -31,30 +33,51 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         HttpSession session = request.getSession();
         User user = null;
         
+        final ObjectMapper objectMapper = new ObjectMapper();
+        
         // Handle OidcUser (for OpenID Connect providers like Google)
         if (authentication.getPrincipal() instanceof OidcUser) {
             OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
             user = findOrCreateUserFromOidcUser(oidcUser);
         } 
         
+        Map<String, Object> responseData = new HashMap<>();
+
         if (user != null) {
             // Store authenticated user in session
             session.setAttribute("authenticated_user", user);
-            
-            // Initialize default user preferences
-            Map<String, Object> preferences = new HashMap<>();
-            preferences.put("theme", "light");
-            preferences.put("language", "en");
-            preferences.put("notifications", true);
-            session.setAttribute("user_preferences", preferences);
-            
+
             // Store session metadata
             session.setAttribute("session_created_time", LocalDateTime.now());
             session.setAttribute("last_activity_time", LocalDateTime.now());
+            
+            // Initialize default user preferences
+            //Map<String, Object> preferences = new HashMap<>();
+            //preferences.put("theme", "light");
+            //preferences.put("language", "en");
+            //preferences.put("notifications", true);
+            //session.setAttribute("user_preferences", preferences);
+
+            // Prepare response
+            responseData.put("success", true);
+            responseData.put("message", "Authentication successful");
+            responseData.put("user", Map.of(
+            "username", user.getUsername(),
+            "email", user.getEmail(),
+            "firstName", user.getFirstName(),
+            "lastName", user.getLastName(),
+            "roles", "ROLE_OWNER_ADMIN"
+                ));
+
+         
         }
         
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(responseData));
+
         // Redirect to a success page or API endpoint
-        response.sendRedirect("/petclinic/api/auth/status");
+        //response.sendRedirect("/petclinic/api/auth/status");
     }
     
     private User findOrCreateUserFromOidcUser(OidcUser oidcUser) {
@@ -112,7 +135,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         }
         
         // Assign default role
-        user.addRole("USER");
+        user.addRole("OWNER_ADMIN");
         
         return user;
     }
