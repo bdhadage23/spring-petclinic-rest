@@ -7,11 +7,15 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.petclinic.model.User;
 import org.springframework.samples.petclinic.service.UserService;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,12 +48,24 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         Map<String, Object> responseData = new HashMap<>();
 
         if (user != null) {
+
+            // Load roles from DB and convert to Spring Authorities
+            var authorities = user.getRoles().stream()
+            .map(role -> new SimpleGrantedAuthority(role.getName())) // DB already has ROLE_ prefix
+            .toList();
+
+        // ✅ Replace authentication with DB-backed auth
+        UsernamePasswordAuthenticationToken newAuth =
+            new UsernamePasswordAuthenticationToken(user, null, authorities);
+
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
             // Store authenticated user in session
             session.setAttribute("authenticated_user", user);
 
             // Store session metadata
             session.setAttribute("session_created_time", LocalDateTime.now());
             session.setAttribute("last_activity_time", LocalDateTime.now());
+            session.setMaxInactiveInterval(60);
             
             // Initialize default user preferences
             //Map<String, Object> preferences = new HashMap<>();

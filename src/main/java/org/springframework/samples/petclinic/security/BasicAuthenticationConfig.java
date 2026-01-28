@@ -10,15 +10,13 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.core.env.Environment;
 
+
 import javax.sql.DataSource;
-import java.util.Map;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true) // Enable @PreAuthorize method-level security
@@ -56,6 +54,26 @@ public class BasicAuthenticationConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                .sessionFixation().migrateSession()
+               /*  .invalidSessionStrategy((req, res) -> {
+
+                 String path = req.getRequestURI();
+                if (path.startsWith("/api/auth/login") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
+                    // Allow login page or public endpoints to proceed even if session expired
+                    return;
+                }
+                res.setStatus(401);
+                res.setContentType("application/json");
+                res.getWriter().write("{\"error\":\"SESSION_EXPIRED\",\"message\":\"Session expired. Please login again.\"}");
+                })*/
+                .maximumSessions(1)
+                .expiredSessionStrategy(event -> {
+                var res = event.getResponse();
+                res.setStatus(401);
+                res.getWriter().write("{\"error\":\"SESSION_EXPIRED\"}");
+                })
             )
             .oauth2Login(oauth2 -> oauth2
                 .loginPage("/api/auth/login")
