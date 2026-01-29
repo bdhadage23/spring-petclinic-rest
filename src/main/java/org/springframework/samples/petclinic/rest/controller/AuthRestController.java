@@ -26,17 +26,31 @@ public class AuthRestController {
     private SessionManagementService sessionManagementService;
 
     /**
-     * Initiate OAuth2 login - redirects to Google OAuth2 authorization
-     * @throws IOException 
+     * Initiate OAuth2 login - returns login URL or redirects to Google OAuth2 authorization
      */
     @GetMapping("/login")
-    public void initiateLogin( HttpServletResponse response) throws IOException {
-        //Map<String, Object> responseMap = new HashMap<>();
-        //responseMap.put("message", "Redirect to OAuth2 provider");
-        //responseMap.put("loginUrl", "/oauth2/authorization/google");
-        //return ResponseEntity.ok(response);
-      
-        response.sendRedirect("/petclinic/oauth2/authorization/google");
+    public ResponseEntity<Map<String, Object>> initiateLogin(HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+      HttpSession session = request.getSession(false);
+      User authenticatedUser = null;
+
+        if (session != null) {
+            authenticatedUser = sessionManagementService.getAuthenticatedUser(session);
+        }
+
+        if (authenticatedUser != null) {
+            response.put("authenticated", true);
+            response.put("message", "User already authenticated");
+            response.put("user", createUserResponse(authenticatedUser));
+            return ResponseEntity.ok(response);
+        }
+        
+        // Return login URL for OAuth2 flow
+        response.put("authenticated", false);
+        response.put("message", "Redirect to OAuth2 provider");
+        response.put("loginUrl", "/oauth2/authorization/google");
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -61,9 +75,9 @@ public class AuthRestController {
     }
 
     /**
-     * Logout user and invalidate session
+     * Spring Security handles logout, this endpoint is just for documentation
      */
-    @PostMapping("/logout")
+    /*@PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request, 
                                                      HttpServletResponse response,
                                                      HttpSession session) {
@@ -86,7 +100,7 @@ public class AuthRestController {
             responseBody.put("message", "Error during logout: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseBody);
         }
-    }
+    }*/
 
     /**
      * Handle OAuth2 login success (called by success handler)
@@ -130,6 +144,7 @@ public class AuthRestController {
         userResponse.put("email", user.getEmail());
         userResponse.put("firstName", user.getFirstName());
         userResponse.put("lastName", user.getLastName());
+        userResponse.put("pictureUrl", user.getPictureUrl());
         userResponse.put("enabled", user.getEnabled());
         userResponse.put("oauthProvider", user.getOauthProvider());
         

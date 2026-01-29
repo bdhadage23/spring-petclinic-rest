@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS users (
   first_name VARCHAR(50),
   last_name VARCHAR(50),
   oauth_provider VARCHAR(20),
-  oauth_id VARCHAR(100)
+  oauth_id VARCHAR(100),
+  picture_url VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS roles (

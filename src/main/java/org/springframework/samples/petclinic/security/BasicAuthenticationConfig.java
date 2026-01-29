@@ -13,8 +13,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.core.env.Environment;
 
+import java.util.HashMap;
 
 import javax.sql.DataSource;
 
@@ -80,9 +84,20 @@ public class BasicAuthenticationConfig {
                 .successHandler(oauth2AuthenticationSuccessHandler)
                 .failureUrl("/api/auth/login?error=true")
             )
-            .logout(logout -> logout
+           .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
                 .logoutSuccessUrl("/api/auth/status")
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+
+                    HashMap<String, Object> body = new HashMap<>();
+                    body.put("success", true);
+                    body.put("message", "Successfully logged out");
+                    body.put("authenticated", false);
+
+                    new ObjectMapper().writeValue(response.getWriter(), body);
+                })
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
             );

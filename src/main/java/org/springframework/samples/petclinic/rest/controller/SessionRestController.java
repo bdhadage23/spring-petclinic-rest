@@ -167,6 +167,7 @@ public class SessionRestController {
         userResponse.put("email", user.getEmail());
         userResponse.put("firstName", user.getFirstName());
         userResponse.put("lastName", user.getLastName());
+        userResponse.put("pictureUrl", user.getPictureUrl());
         userResponse.put("enabled", user.getEnabled());
         userResponse.put("oauthProvider", user.getOauthProvider());
         

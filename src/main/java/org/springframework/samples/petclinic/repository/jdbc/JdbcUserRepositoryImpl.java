@@ -39,7 +39,7 @@ public class JdbcUserRepositoryImpl implements UserRepository {
         try {
             getByUsername(user.getUsername());
             this.namedParameterJdbcTemplate.update(
-                "UPDATE users SET password=:password, enabled=:enabled, email=:email, first_name=:firstName, last_name=:lastName, oauth_provider=:oauthProvider, oauth_id=:oauthId WHERE username=:username",
+                "UPDATE users SET password=:password, enabled=:enabled, email=:email, first_name=:firstName, last_name=:lastName, oauth_provider=:oauthProvider, oauth_id=:oauthId, picture_url=:pictureUrl WHERE username=:username",
                 parameterSource);
         } catch (EmptyResultDataAccessException e) {
             this.insertUser.execute(parameterSource);

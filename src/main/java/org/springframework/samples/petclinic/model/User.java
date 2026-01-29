@@ -45,6 +45,9 @@ public class User implements Serializable {
     @Column(name = "oauth_id")
     private String oauthId;
 
+    @Column(name = "picture_url")
+    private String pictureUrl;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.EAGER)
     private Set<Role> roles;
 
@@ -128,5 +131,13 @@ public class User implements Serializable {
 
     public void setOauthId(String oauthId) {
         this.oauthId = oauthId;
+    }
+
+    public String getPictureUrl() {
+        return pictureUrl;
+    }
+
+    public void setPictureUrl(String pictureUrl) {
+        this.pictureUrl = pictureUrl;
     }
 }
